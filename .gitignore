@@ -1,0 +1,19 @@
+# Python
+__pycache__/
+*.py[cod]
+
+# macOS
+.DS_Store
+
+# Pipeline run artifacts (produced in each video's working dir, never in the skill)
+slides_hd/
+*.png
+!assets/*.png
+meta.json
+transcript.json
+digest.json
+content.json
+slide_instances.json
+slide_manifest.json
+capture_report.json
+contact_sheet.png

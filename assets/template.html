@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{PAGE_TITLE}}</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600&family=Noto+Serif+SC:wght@400;700&display=swap');
+
+  :root {
+    --yellow: #F5C518;
+    --black: #1a1a1a;
+    --dark: #2d2d2d;
+    --gray: #6b6b6b;
+    --light-gray: #e8e8e8;
+    --bg: #fafaf8;
+    --white: #ffffff;
+    --accent: #c0392b;
+    --serif: 'Playfair Display', 'Noto Serif SC', Georgia, serif;
+    --sans: 'Inter', -apple-system, 'PingFang SC', sans-serif;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html {
+    font-size: 16px;
+    scroll-behavior: smooth;
+    background: var(--bg);
+  }
+
+  body {
+    font-family: var(--sans);
+    color: var(--black);
+    line-height: 1.7;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ── Top Bar ── */
+  .topbar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 48px;
+    background: var(--yellow);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    border-bottom: 1px solid rgba(0,0,0,0.1);
+  }
+  .topbar span {
+    font-family: var(--serif);
+    font-size: 0.7rem;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    color: var(--black);
+    font-weight: 700;
+  }
+
+  /* ── Navigation ── */
+  .nav {
+    position: fixed;
+    top: 48px;
+    left: 0;
+    right: 0;
+    height: 52px;
+    background: var(--white);
+    border-bottom: 2px solid var(--black);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 2rem;
+    z-index: 99;
+  }
+  .nav a {
+    font-family: var(--sans);
+    font-size: 0.72rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    text-decoration: none;
+    color: var(--black);
+    font-weight: 500;
+    padding: 4px 0;
+    border-bottom: 2px solid transparent;
+    transition: border-color 0.2s;
+  }
+  .nav a:hover, .nav a.active {
+    border-bottom-color: var(--black);
+  }
+  .nav-sep {
+    width: 1px;
+    height: 20px;
+    background: var(--light-gray);
+  }
+
+  /* ── Hero ── */
+  .hero {
+    margin-top: 100px;
+    padding: 5rem 2rem 4rem;
+    text-align: center;
+    border-bottom: 2px solid var(--black);
+    background: var(--white);
+  }
+  .hero-label {
+    font-size: 0.65rem;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: var(--accent);
+    font-weight: 600;
+    margin-bottom: 1.5rem;
+  }
+  .hero h1 {
+    font-family: var(--serif);
+    font-size: clamp(2.2rem, 5vw, 3.6rem);
+    font-weight: 400;
+    line-height: 1.15;
+    max-width: 800px;
+    margin: 0 auto 1.5rem;
+    color: var(--black);
+  }
+  .hero-sub {
+    font-size: 1.05rem;
+    color: var(--gray);
+    max-width: 600px;
+    margin: 0 auto 2rem;
+    line-height: 1.6;
+  }
+  .hero-meta {
+    font-size: 0.75rem;
+    color: var(--gray);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+  .hero-meta strong { color: var(--black); font-weight: 600; }
+
+  /* ── Section Headers ── */
+  .section-header {
+    padding: 3rem 2rem 2rem;
+    text-align: center;
+    border-bottom: 1px solid var(--light-gray);
+    background: var(--white);
+  }
+  .section-header .section-num {
+    font-size: 0.65rem;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: var(--accent);
+    font-weight: 600;
+    margin-bottom: 0.8rem;
+  }
+  .section-header h2 {
+    font-family: var(--serif);
+    font-size: clamp(1.8rem, 4vw, 2.6rem);
+    font-weight: 400;
+    line-height: 1.2;
+    margin-bottom: 0.8rem;
+    color: var(--black);
+  }
+  .section-header p {
+    color: var(--gray);
+    font-size: 0.95rem;
+    max-width: 560px;
+    margin: 0 auto;
+  }
+
+  /* ── Slides Grid ── */
+  .slides-container {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 3rem 2rem;
+  }
+  .slide-card {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2.5rem;
+    align-items: start;
+    padding: 2.5rem 0;
+    border-bottom: 1px solid var(--light-gray);
+  }
+  .slide-card:last-child { border-bottom: none; }
+  .slide-card.reverse { direction: rtl; }
+  .slide-card.reverse > * { direction: ltr; }
+  .slide-img-wrap {
+    position: relative;
+    overflow: hidden;
+    border: 1px solid var(--light-gray);
+    background: #f0f0f0;
+  }
+  .slide-img-wrap img {
+    width: 100%;
+    display: block;
+  }
+  .slide-timestamp {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    background: var(--black);
+    color: var(--white);
+    font-size: 0.65rem;
+    padding: 2px 8px;
+    font-weight: 500;
+    letter-spacing: 0.05em;
+    font-family: var(--sans);
+  }
+  .slide-text {
+    padding-top: 0.5rem;
+  }
+  .slide-text .slide-num {
+    font-size: 0.6rem;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    color: var(--accent);
+    font-weight: 600;
+    margin-bottom: 0.6rem;
+  }
+  .slide-text h3 {
+    font-family: var(--serif);
+    font-size: 1.35rem;
+    font-weight: 400;
+    line-height: 1.3;
+    margin-bottom: 0.8rem;
+    color: var(--black);
+  }
+  .slide-text .en {
+    color: var(--gray);
+    font-size: 0.88rem;
+    line-height: 1.6;
+    margin-bottom: 0.6rem;
+  }
+  .slide-text .zh {
+    font-size: 0.88rem;
+    line-height: 1.7;
+    color: var(--dark);
+  }
+
+  /* ── Q&A Section ── */
+  .qa-container {
+    max-width: 780px;
+    margin: 0 auto;
+    padding: 3rem 2rem;
+  }
+  .qa-item {
+    padding: 2rem 0;
+    border-bottom: 1px solid var(--light-gray);
+  }
+  .qa-item:last-child { border-bottom: none; }
+  .qa-meta {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    margin-bottom: 1rem;
+  }
+  .qa-number {
+    width: 28px;
+    height: 28px;
+    background: var(--black);
+    color: var(--white);
+    font-size: 0.7rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .qa-who {
+    font-size: 0.7rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--gray);
+    font-weight: 500;
+  }
+  .qa-question {
+    margin-bottom: 1.2rem;
+  }
+  .qa-question h4 {
+    font-family: var(--serif);
+    font-size: 1.15rem;
+    font-weight: 400;
+    line-height: 1.4;
+    margin-bottom: 0.4rem;
+    color: var(--black);
+  }
+  .qa-question .zh-q {
+    font-size: 0.88rem;
+    color: var(--gray);
+    font-style: italic;
+  }
+  .qa-answer {
+    padding-left: 1.2rem;
+    border-left: 2px solid var(--yellow);
+  }
+  .qa-answer .en-a {
+    font-size: 0.88rem;
+    line-height: 1.7;
+    color: var(--dark);
+    margin-bottom: 0.5rem;
+  }
+  .qa-answer .zh-a {
+    font-size: 0.88rem;
+    line-height: 1.8;
+    color: var(--black);
+  }
+  .qa-tag {
+    display: inline-block;
+    font-size: 0.6rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    background: var(--yellow);
+    color: var(--black);
+    padding: 2px 8px;
+    font-weight: 600;
+    margin-top: 0.8rem;
+  }
+
+  /* ── Insights Section ── */
+  .insights-container {
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 3rem 2rem;
+  }
+  .insight-card {
+    padding: 2.5rem 0;
+    border-bottom: 1px solid var(--light-gray);
+  }
+  .insight-card:last-child { border-bottom: none; }
+  .insight-num {
+    font-family: var(--serif);
+    font-size: 2.8rem;
+    color: var(--light-gray);
+    line-height: 1;
+    margin-bottom: 0.8rem;
+  }
+  .insight-title {
+    font-family: var(--serif);
+    font-size: 1.5rem;
+    font-weight: 400;
+    line-height: 1.3;
+    margin-bottom: 0.6rem;
+    color: var(--black);
+  }
+  .insight-title-zh {
+    font-size: 1.1rem;
+    color: var(--gray);
+    margin-bottom: 1rem;
+  }
+  .insight-body {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+  }
+  .insight-body .en-col {
+    font-size: 0.88rem;
+    line-height: 1.7;
+    color: var(--dark);
+  }
+  .insight-body .zh-col {
+    font-size: 0.88rem;
+    line-height: 1.8;
+    color: var(--black);
+  }
+  .insight-source {
+    margin-top: 1rem;
+    font-size: 0.7rem;
+    color: var(--gray);
+    letter-spacing: 0.05em;
+  }
+  .insight-source span {
+    background: rgba(245,197,24,0.25);
+    padding: 1px 6px;
+  }
+
+  /* ── Footer ── */
+  .footer {
+    padding: 3rem 2rem;
+    text-align: center;
+    border-top: 2px solid var(--black);
+    background: var(--white);
+  }
+  .footer p {
+    font-size: 0.75rem;
+    color: var(--gray);
+    letter-spacing: 0.1em;
+  }
+  .footer a {
+    color: var(--accent);
+    text-decoration: none;
+  }
+
+  /* ── Responsive ── */
+  @media (max-width: 768px) {
+    .slide-card { grid-template-columns: 1fr; gap: 1rem; }
+    .slide-card.reverse { direction: ltr; }
+    .insight-body { grid-template-columns: 1fr; gap: 1rem; }
+    .nav { gap: 0.8rem; overflow-x: auto; padding: 0 1rem; justify-content: flex-start; }
+    .nav a { font-size: 0.65rem; white-space: nowrap; }
+  }
+
+  /* ── Scroll anchor offset ── */
+  [id] { scroll-margin-top: 110px; }
+
+  /* ── Slide hover hint ── */
+  .slide-img-wrap {
+    cursor: zoom-in;
+  }
+
+  /* ── Lightbox ── */
+  .lightbox {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 200;
+    background: rgba(0,0,0,0.94);
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    opacity: 0;
+    transition: opacity 0.25s ease;
+  }
+  .lightbox.open {
+    display: flex;
+    opacity: 1;
+  }
+  .lightbox.fade-in { opacity: 1; }
+  .lightbox-img {
+    max-width: 92vw;
+    max-height: 82vh;
+    object-fit: contain;
+    user-select: none;
+    -webkit-user-drag: none;
+  }
+  .lightbox-close, .lightbox-fs, .lightbox-prev, .lightbox-next {
+    position: absolute;
+    background: none;
+    border: none;
+    cursor: pointer;
+    transition: opacity 0.15s;
+    padding: 8px;
+    opacity: 0.6;
+    z-index: 210;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .lightbox-close:hover, .lightbox-fs:hover, .lightbox-prev:hover, .lightbox-next:hover {
+    opacity: 1;
+  }
+  .lightbox-close, .lightbox-fs {
+    top: 20px;
+    width: 40px;
+    height: 40px;
+  }
+  .lightbox-close { right: 20px; }
+  .lightbox-fs { right: 64px; }
+  .lightbox-close svg, .lightbox-fs svg, .lightbox-prev svg, .lightbox-next svg {
+    width: 20px;
+    height: 20px;
+    stroke: #fff;
+    stroke-width: 2;
+    fill: none;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+  .lightbox-prev, .lightbox-next {
+    top: 50%;
+    transform: translateY(-50%);
+    width: 44px;
+    height: 44px;
+  }
+  .lightbox-prev { left: 12px; }
+  .lightbox-next { right: 12px; }
+  .lightbox-counter {
+    position: absolute;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    color: rgba(255,255,255,0.55);
+    font-size: 0.8rem;
+    font-family: var(--sans);
+    letter-spacing: 0.15em;
+    user-select: none;
+  }
+  .lightbox-caption {
+    position: absolute;
+    bottom: 48px;
+    left: 50%;
+    transform: translateX(-50%);
+    color: rgba(255,255,255,0.8);
+    font-size: 0.85rem;
+    font-family: var(--serif);
+    text-align: center;
+    max-width: 600px;
+    user-select: none;
+  }
+
+  @media (max-width: 768px) {
+    .lightbox-prev { left: 4px; }
+    .lightbox-next { right: 4px; }
+    .lightbox-img { max-width: 98vw; max-height: 78vh; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Top Bar -->
+<div class="topbar">
+  <span>{{TOPBAR}}</span>
+</div>
+
+<!-- Navigation -->
+<nav class="nav">
+  <a href="#slides">Presentation Slides</a>
+  <div class="nav-sep"></div>
+  <!--QA_NAV_START--><a href="#qa">Q&A</a>
+  <div class="nav-sep"></div><!--QA_NAV_END-->
+  <a href="#insights">Core Insights</a>
+</nav>
+
+<!-- Hero -->
+<header class="hero" id="top">
+  <div class="hero-label">{{HERO_LABEL}}</div>
+  <h1>{{TITLE_HTML}}</h1>
+  <p class="hero-sub">{{SUBTITLE_EN}}</p>
+  <p class="hero-sub" style="font-size:0.92rem;">{{SUBTITLE_ZH}}</p>
+  <p class="hero-meta">{{SPEAKERS}}</p>
+</header>
+
+<!-- ═══════════════════════════════════════ -->
+<!-- SECTION 1: PRESENTATION SLIDES        -->
+<!-- ═══════════════════════════════════════ -->
+
+<div class="section-header" id="slides">
+  <div class="section-num">Part I</div>
+  <h2>Presentation Slides</h2>
+  <p>{{SLIDES_DESC}}</p>
+</div>
+
+<div class="slides-container">
+
+<!-- SLIDES -->
+
+</div><!-- slides-container -->
+
+
+<!--QA_SECTION_START-->
+<!-- ═══════════════════════════════════════ -->
+<!-- SECTION 2: Q&A                        -->
+<!-- ═══════════════════════════════════════ -->
+
+<div class="section-header" id="qa">
+  <div class="section-num">Part II</div>
+  <h2>Q&A Session</h2>
+  <p>{{QA_DESC}}</p>
+</div>
+
+<div class="qa-container">
+
+<!-- QA_ITEMS -->
+
+</div><!-- qa-container -->
+<!--QA_SECTION_END-->
+
+
+<!-- ═══════════════════════════════════════ -->
+<!-- SECTION 3: CORE INSIGHTS               -->
+<!-- ═══════════════════════════════════════ -->
+
+<div class="section-header" id="insights">
+  <div class="section-num">Part III</div>
+  <h2>Core Insights & Methods</h2>
+  <p>{{INSIGHTS_DESC}}</p>
+</div>
+
+<div class="insights-container">
+
+<!-- INSIGHTS -->
+
+</div><!-- insights-container -->
+
+
+<!-- Footer -->
+<div class="footer">
+  <p>Source: <a href="{{SOURCE_URL}}" target="_blank">{{SOURCE_TITLE}}</a></p>
+  <p style="margin-top:0.5rem;">{{FOOTER_NOTE}}</p>
+</div>
+
+<!-- Lightbox -->
+<div class="lightbox" id="lightbox" role="dialog" aria-modal="true">
+  <button class="lightbox-close" aria-label="Close" title="Close (Esc)"><svg viewBox="0 0 20 20"><line x1="4" y1="4" x2="16" y2="16"/><line x1="16" y1="4" x2="4" y2="16"/></svg></button>
+  <button class="lightbox-fs" aria-label="Fullscreen" title="Fullscreen (F)"><svg viewBox="0 0 20 20"><polyline points="6,2 2,2 2,6"/><polyline points="14,2 18,2 18,6"/><polyline points="6,18 2,18 2,14"/><polyline points="14,18 18,18 18,14"/></svg></button>
+  <button class="lightbox-prev" aria-label="Previous slide" title="Previous (←)"><svg viewBox="0 0 20 20"><polyline points="13,4 7,10 13,16"/></svg></button>
+  <button class="lightbox-next" aria-label="Next slide" title="Next (→)"><svg viewBox="0 0 20 20"><polyline points="7,4 13,10 7,16"/></svg></button>
+  <img class="lightbox-img" id="lightbox-img" src="" alt="">
+  <div class="lightbox-caption" id="lightbox-caption"></div>
+  <div class="lightbox-counter" id="lightbox-counter"></div>
+</div>
+
+<script>
+(function() {
+  const lb = document.getElementById('lightbox');
+  const lbImg = document.getElementById('lightbox-img');
+  const lbCaption = document.getElementById('lightbox-caption');
+  const lbCounter = document.getElementById('lightbox-counter');
+  const slides = Array.from(document.querySelectorAll('.slide-img-wrap'));
+  let current = 0;
+
+  function open(idx) {
+    current = idx;
+    update();
+    lb.classList.add('open');
+    requestAnimationFrame(() => lb.classList.add('fade-in'));
+    document.body.style.overflow = 'hidden';
+  }
+
+  function close() {
+    lb.classList.remove('fade-in');
+    setTimeout(() => {
+      lb.classList.remove('open');
+      document.body.style.overflow = '';
+    }, 200);
+  }
+
+  function update() {
+    const wrap = slides[current];
+    const img = wrap.querySelector('img');
+    lbImg.src = img.src;
+    lbImg.alt = img.alt;
+    lbCaption.textContent = img.alt || '';
+    lbCounter.textContent = (current + 1) + ' / ' + slides.length;
+  }
+
+  function prev() { current = (current - 1 + slides.length) % slides.length; update(); }
+  function next() { current = (current + 1) % slides.length; update(); }
+
+  function toggleFullscreen() {
+    if (!document.fullscreenElement) {
+      lb.requestFullscreen().catch(function(){});
+    } else {
+      document.exitFullscreen();
+    }
+  }
+
+  slides.forEach(function(wrap, i) {
+    wrap.addEventListener('click', function() { open(i); });
+  });
+
+  lb.querySelector('.lightbox-close').addEventListener('click', close);
+  lb.querySelector('.lightbox-prev').addEventListener('click', function(e) { e.stopPropagation(); prev(); });
+  lb.querySelector('.lightbox-next').addEventListener('click', function(e) { e.stopPropagation(); next(); });
+  lb.querySelector('.lightbox-fs').addEventListener('click', function(e) { e.stopPropagation(); toggleFullscreen(); });
+
+  lb.addEventListener('click', function(e) {
+    if (e.target === lb) close();
+  });
+
+  document.addEventListener('keydown', function(e) {
+    if (!lb.classList.contains('open')) return;
+    if (e.key === 'Escape') close();
+    else if (e.key === 'ArrowLeft') prev();
+    else if (e.key === 'ArrowRight') next();
+    else if (e.key === 'f' || e.key === 'F') toggleFullscreen();
+  });
+})();
+</script>
+
+</body>
+</html>
