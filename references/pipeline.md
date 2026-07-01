@@ -106,15 +106,49 @@ back to `duration/frameCount`).
 
 ## Slide detection heuristic (detect_slides.py)
 
-The discriminator between a real full-screen slide and a camera-on-speaker shot is the
-**purple-pixel fraction**: conference stage lighting/backdrop reads as purple
-(`R>70 and B>70 and G < 0.72·R and G < 0.72·B`). Slides are near-0% purple, bright, mostly
-white. Per frame: `is_slide = white>0.28 and purple<0.12 and brightness>120`.
+### Auto-theme detection (改動 M)
 
-Frames are segmented on visual transitions (`fdiff > 18` between consecutive frames); a
-segment that is ≥50% slide-frames becomes one slide instance, represented by its
-highest-white-fraction frame (the most fully-rendered moment). These thresholds are the proven
-values — change only with evidence.
+The script auto-detects whether the talk uses light-background or dark-background slides, then
+applies the matching heuristic. This is necessary because dark-themed code talks (black bg,
+white text) produce 0 detections under the white-slide heuristic — all frames have wf < 0.18
+and brightness < 50.
+
+**Theme decision** (after computing stats for all frames):
+- `light` if ≥10% of frames pass the white-slide test
+- `dark` if ≥15% of frames pass the dark-slide test (and light didn't trigger)
+- Default: `light`
+
+Why not OR both paths: white-background talks can have high-variance speaker shots that
+accidentally trigger the dark-slide heuristic, creating false positives. Auto-detecting first
+is safer.
+
+### Light theme (white-background PPT)
+
+`is_slide = white>0.28 and purple<0.12 and brightness>120`
+
+The discriminator is the **purple-pixel fraction**: conference stage lighting reads as purple
+(`R>70 and B>70 and G < 0.72·R and G < 0.72·B`). Slides are near-0% purple, bright, mostly
+white. Transition threshold: `fdiff > 18`. Representative: highest white-fraction frame.
+
+### Dark theme (black-background code talks)
+
+`is_slide = var>1500 and tf>0.10 and purple<0.12`
+
+Two signals replace white-fraction:
+- **`tf` (text fraction)**: grayscale pixels > 150 (bright text/graphics on dark background).
+  Dark slides: tf > 0.15; speaker shots: tf < 0.08. Clean gap in between.
+- **`var` (color variance)**: per-pixel RGB variance on a 16×9 downsample. Structured content
+  (text on solid background) produces high variance (>3000); organic speaker shots are smooth
+  (<1000). Thresholds are set conservatively below the observed gap.
+
+Transition threshold: `fdiff > 10` (dark slides have subtler transitions than white slides).
+Representative: highest text-fraction frame.
+
+### Common to both themes
+
+Frames are segmented on visual transitions; a segment that is ≥50% slide-frames becomes one
+slide instance. The `sigDiff_prev` column in the output uses a 16×9 grayscale perceptual
+signature and is independent of the theme — the dedup agent uses it the same way for both.
 
 ## Dedup judgement (reading the table)
 

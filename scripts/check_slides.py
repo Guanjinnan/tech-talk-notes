@@ -45,8 +45,10 @@ def score_image(img_path):
     wf = float(np.sum(is_white(r, g, b)) / total)
     pf = float(np.sum(is_purple(r, g, b)) / total)
     brightness = float(np.mean(arr))
+    tf = float(np.sum(np.mean(arr, axis=2) > 150) / total)
     return {"wf": round(wf, 4), "pf": round(pf, 4),
             "brightness": round(brightness, 1),
+            "tf": round(tf, 4),
             "width": img.width, "height": img.height}
 
 
@@ -56,19 +58,30 @@ def perceptual_diff(path_a, path_b, size=(64, 64)):
     return float(np.mean(np.abs(a - b)))
 
 
-def classify(scores, min_width=1280):
+def classify(scores, min_width=1280, theme="light"):
     flags = []
-    # Resolution is the property that actually breaks capture (ABR starts at
-    # 144p): assert it directly, don't infer it from content heuristics.
     if scores["width"] < min_width:
         flags.append("low-resolution")
     if scores["pf"] >= 0.12:
         flags.append("suspect-speaker-shot")
-    if scores["wf"] < 0.10 and scores["brightness"] < 100:
-        flags.append("suspect-dark-frame")
-    if scores["wf"] < 0.15 and scores["pf"] >= 0.05:
-        flags.append("suspect-stage-wide")
+    if theme == "light":
+        if scores["wf"] < 0.10 and scores["brightness"] < 100:
+            flags.append("suspect-dark-frame")
+        if scores["wf"] < 0.15 and scores["pf"] >= 0.05:
+            flags.append("suspect-stage-wide")
     return flags
+
+
+def detect_theme(results):
+    """Auto-detect light/dark theme from the captured slide set."""
+    light = sum(1 for r in results if r["wf"] > 0.28 and r["brightness"] > 120)
+    dark = sum(1 for r in results if r["tf"] > 0.10 and r["brightness"] < 100)
+    n = len(results)
+    if light >= n * 0.3:
+        return "light"
+    if dark >= n * 0.5:
+        return "dark"
+    return "light"
 
 
 def make_contact_sheet(paths, cols=6, thumb_w=320):
@@ -105,14 +118,19 @@ def main():
     if not pngs:
         sys.exit(f"No PNGs found in {slides_dir}")
 
+    # First pass: score all images to detect theme
+    all_scores = []
+    for p in pngs:
+        all_scores.append(score_image(p))
+    theme = detect_theme(all_scores)
+
     results = []
     prev_path = None
     flagged_count = 0
     suspect_dup_count = 0
 
-    for p in pngs:
-        scores = score_image(p)
-        flags = classify(scores, args.min_width)
+    for p, scores in zip(pngs, all_scores):
+        flags = classify(scores, args.min_width, theme)
 
         sig_diff = None
         if prev_path:
@@ -122,8 +140,12 @@ def main():
                 suspect_dup_count += 1
         scores["sigDiff_prev"] = sig_diff
 
-        is_slide = (scores["wf"] > 0.28 and scores["pf"] < 0.12
-                    and scores["brightness"] > 120)
+        if theme == "dark":
+            is_slide = (scores["tf"] > 0.10 and scores["pf"] < 0.12
+                        and scores["brightness"] < 100)
+        else:
+            is_slide = (scores["wf"] > 0.28 and scores["pf"] < 0.12
+                        and scores["brightness"] > 120)
 
         entry = {"file": p.name, **scores, "is_slide": is_slide,
                  "flags": flags}
@@ -142,6 +164,7 @@ def main():
         "flagged": flagged_count,
         "suspect_duplicates": suspect_dup_count,
         "low_resolution": low_res_count,
+        "theme": theme,
         "min_width": args.min_width,
         "min_captured_width": min((r["width"] for r in results), default=0),
         "verdict": "all-clear" if flagged_count == 0 else "needs-review",

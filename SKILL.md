@@ -73,10 +73,12 @@ out of the main context.
 ```
 python3 "$SK/scripts/detect_slides.py" --meta meta.json --out slide_instances.json
 ```
-This prints a table of slide instances with timestamps, white-fraction, and
-signature-diff-from-previous. **Delegate dedup judgement to a sub-agent** (改動 F): pass it
-the table output and have it return the curated `slide_manifest.json`. The sub-agent should
-follow the dedup rules in `references/pipeline.md`.
+This auto-detects the slide theme (light/dark) and prints a table of slide instances with
+timestamps, white/text fraction, color variance, and signature-diff-from-previous. Dark-themed
+talks (black bg, white text) use text-fraction + color-variance signals instead of
+white-fraction (改動 M). **Delegate dedup judgement to a sub-agent** (改動 F): pass it the table
+output and have it return the curated `slide_manifest.json`. The sub-agent should follow the
+dedup rules in `references/pipeline.md`.
 
 ```json
 [ { "idx": 0, "cap_t": 60 }, { "idx": 1, "cap_t": 128 }, ... ]

@@ -3,15 +3,17 @@
 """Detect which storyboard frames are real full-screen slides (vs. speaker/stage shots).
 
 Consumes meta.json from get_meta.mjs (storyboard sheet-URL template + geometry), fetches
-the storyboard sheets, and uses a purple-pixel-fraction heuristic to separate slides
-(near-0% purple, bright, mostly white) from camera-on-speaker shots (35–42% purple stage
-backdrop). Segments on visual transitions, keeps majority-slide segments, and prints a
-signature-diff table so Claude can drop near-duplicates and pick final capture timestamps.
+the storyboard sheets, and classifies frames as slide vs. non-slide using one of two paths:
+
+  - Light theme (white-background PPT): white-pixel fraction + brightness + low purple
+  - Dark theme (black-background code talks): text fraction + color variance + low purple
+
+The theme is auto-detected from the frame population. Segments on visual transitions, keeps
+majority-slide segments, and prints a signature-diff table so Claude can drop near-duplicates
+and pick final capture timestamps.
 
 Usage:
     detect_slides.py --meta /path/meta.json --out /path/slide_instances.json
-
-Heuristic thresholds are the proven values from the original pipeline — change with care.
 
 Requires: pip install pillow
 """
@@ -68,7 +70,22 @@ def stats(im):
         bright += (R + G + B)
         if min(R, G, B) > 175: white += 1
         if R > 70 and B > 70 and G < R * 0.72 and G < B * 0.72: purple += 1
-    return bright / (N * 3), white / N, purple / N
+    br = bright / (N * 3)
+    wf = white / N
+    pf = purple / N
+
+    # Dark-slide signals
+    gpx = list(im.convert("L").getdata())
+    tf = sum(1 for p in gpx if p > 150) / len(gpx)
+
+    small = im.resize((16, 9))
+    spx = list(small.getdata()); sN = len(spx)
+    mr = sum(p[0] for p in spx) / sN
+    mg = sum(p[1] for p in spx) / sN
+    mb = sum(p[2] for p in spx) / sN
+    var = sum((p[0]-mr)**2 + (p[1]-mg)**2 + (p[2]-mb)**2 for p in spx) / (sN * 3)
+
+    return br, wf, pf, tf, var
 
 def sig(im):  # perceptual signature: 16x9 grayscale
     return list(im.convert("L").resize((16, 9)).getdata())
@@ -83,35 +100,64 @@ def fdiff(a, b):
 
 rows = []; prev = None
 for t, fr in frames:
-    br, wf, pf = stats(fr)
+    br, wf, pf, tf, var = stats(fr)
     d = fdiff(prev, fr) if prev is not None else 0
-    is_slide = (wf > 0.28 and pf < 0.12 and br > 120)
-    rows.append({"t": t, "br": br, "wf": wf, "pf": pf, "d": d, "slide": is_slide, "sig": sig(fr)})
+    rows.append({"t": t, "br": br, "wf": wf, "pf": pf, "tf": tf, "var": var,
+                 "d": d, "sig": sig(fr)})
     prev = fr
 
-# segment on transitions
+# Auto-detect theme from frame population
+light_count = sum(1 for r in rows if r["wf"] > 0.28 and r["pf"] < 0.12 and r["br"] > 120)
+dark_count = sum(1 for r in rows if r["var"] > 1500 and r["tf"] > 0.10 and r["pf"] < 0.12)
+
+if light_count >= len(rows) * 0.10:
+    theme = "light"
+elif dark_count >= len(rows) * 0.15:
+    theme = "dark"
+else:
+    theme = "light"
+
+print(f"theme: {theme} (light_hits={light_count}, dark_hits={dark_count}, total={len(rows)})")
+
+# Classify with theme-specific heuristic
+for r in rows:
+    if theme == "light":
+        r["slide"] = (r["wf"] > 0.28 and r["pf"] < 0.12 and r["br"] > 120)
+    else:
+        r["slide"] = (r["var"] > 1500 and r["tf"] > 0.10 and r["pf"] < 0.12)
+
+# Segment on transitions (adaptive threshold)
+FDIFF_TH = 10 if theme == "dark" else 18
 segs = []; cur = [rows[0]]
 for r in rows[1:]:
-    if r["d"] > 18: segs.append(cur); cur = [r]
+    if r["d"] > FDIFF_TH: segs.append(cur); cur = [r]
     else: cur.append(r)
 segs.append(cur)
 
-# slide instances = segments that are majority-slide; representative = cleanest (max white)
+# Slide instances = segments that are majority-slide
 instances = []
 for s in segs:
     if sum(1 for r in s if r["slide"]) / len(s) >= 0.5:
-        rep = max(s, key=lambda r: r["wf"])
+        if theme == "dark":
+            rep = max(s, key=lambda r: r["tf"])
+        else:
+            rep = max(s, key=lambda r: r["wf"])
         instances.append({"t0": s[0]["t"], "t1": s[-1]["t"], "rep": rep})
 
 mm = lambda x: f"{x//60}:{x%60:02d}"
-print(f"\n{len(instances)} raw slide instances. Inter-instance signature diffs:\n")
-print(" #  t_rep   range        white  sigDiff_prev")
+print(f"\n{len(instances)} raw slide instances (theme={theme}, fdiff_th={FDIFF_TH}). "
+      f"Inter-instance signature diffs:\n")
+print(" #  t_rep   range        white  text   var    sigDiff_prev")
 for i, inst in enumerate(instances):
     sd = sdiff(inst["rep"]["sig"], instances[i-1]["rep"]["sig"]) if i > 0 else 999
-    print(f"{i:2} {mm(inst['rep']['t']):>6}  {mm(inst['t0'])}-{mm(inst['t1']):<6}  {inst['rep']['wf']*100:4.0f}%  {sd:6.1f}")
+    r = inst["rep"]
+    print(f"{i:2} {mm(r['t']):>6}  {mm(inst['t0'])}-{mm(inst['t1']):<6}  "
+          f"{r['wf']*100:4.0f}%  {r['tf']*100:4.0f}%  {r['var']:5.0f}  {sd:6.1f}")
 
 out = [{"idx": i, "t_rep": inst["rep"]["t"], "t0": inst["t0"], "t1": inst["t1"],
-        "white": round(inst["rep"]["wf"], 3), "sig": inst["rep"]["sig"]}
+        "white": round(inst["rep"]["wf"], 3),
+        "text": round(inst["rep"]["tf"], 3),
+        "sig": inst["rep"]["sig"]}
        for i, inst in enumerate(instances)]
 json.dump(out, open(args.out, "w"), ensure_ascii=False)
 print(f"\nsaved {len(out)} instances -> {args.out}")
